@@ -1,0 +1,86 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: github-add-webhook
+  description: |
+    This Task will add a webhook to a github repository.
+spec:
+  params:
+  - name: GITHUB_HOST_URL
+    description: |
+      The GitHub host, adjust this if you run a GitHub enteprise.
+    default: "api.github.com"
+    type: string
+
+  - name: API_PATH_PREFIX
+    description: |
+      The API path prefix, GitHub Enterprise has a prefix e.g. /api/v3
+    default: ""
+    type: string
+
+  - name: REQUEST_URL
+    description: |
+      The GitHub issue or pull request URL where we want to add a new
+      comment.
+    type: string
+
+  steps:
+    - name: add-comment
+      env:
+        - name: GITHUBTOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github
+              key: token
+
+      image: registry.access.redhat.com/ubi8/ubi:latest
+      script: |
+        #!/usr/libexec/platform-python
+        import json
+        import os
+        import http.client
+        import urllib.parse
+
+        split_url = urllib.parse.urlparse(
+            "$(params.REQUEST_URL)").path.split("/")
+
+        # This will convert https://github.com/foo/bar/pull/202 to
+        # api url path /repos/foo/issues/202
+        api_url = "$(params.API_PATH_PREFIX)" + "/repos/" + "/".join(split_url[1:3])
+        print(api_url)
+
+        # Trying to avoid quotes issue as much as possible by using triple
+        # quotes
+
+        data = {
+          "name": "web",
+          "active": False,
+          "events": [
+            "push",
+            "pull_request"
+          ],
+          "config": {
+            "url": "https://example.com/webhook",
+            "content_type": "json",
+            "insecure_ssl": "0"
+          }
+        }
+        print("Adding webhook to GitHub: ")
+        print(data)
+
+        conn = http.client.HTTPSConnection("$(params.GITHUB_HOST_URL)")
+        r = conn.request(
+            "POST",
+            api_url + "/hooks",
+            body=json.dumps(data),
+            headers={
+                "User-Agent": "TektonCD, the peaceful cat",
+                "Authorization": "Bearer " + os.environ["GITHUBTOKEN"],
+            })
+        resp = conn.getresponse()
+        if not str(resp.status).startswith("2"):
+            print("Error: %d" % (resp.status))
+            print(resp.read())
+        else:
+          print("a GitHub comment has been added to "
+                "$(params.REQUEST_URL)")
