@@ -1,0 +1,13 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: github-binding
+spec:
+  params:
+    - name: gitrevision
+      value: master
+    - name: gitrepositoryurl
+      value: $(body.repository.html_url)
+    - name: comment
+      value: $(body.comment.body)
