@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: condition-pipeline
+spec:
+  tasks:
+  - name: process-1
+    conditions:
+    - conditionRef: is-comment-a
+      params:
+        - name: comment
+          value: '/lgtm\r\n/approve\r\n/test'
+    taskRef:
+      kind: Task
+      name: task-a
+  - name: process-2
+    conditions:
+    - conditionRef: is-comment-a
+      params:
+        - name: comment
+          value: "/re-test"
+    taskRef:
+      kind: Task
+      name: task-b
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: task-a
+spec:
+  steps:
+    - name: echo
+      image: ubuntu
+      script: 'echo task-a'
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: task-b
+spec:
+  steps:
+    - name: echo
+      image: ubuntu
+      script: 'echo task-b'
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: condition-pipelinerun
+spec:
+  pipelineRef:
+    name: condition-pipeline

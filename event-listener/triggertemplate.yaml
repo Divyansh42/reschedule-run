@@ -9,30 +9,10 @@ spec:
     - name: gitrepositoryurl
     - name: comment
   resourcetemplates:
-    - apiVersion: tekton.dev/v1alpha1
-      kind: TaskRun
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
       metadata:
-        generateName: github-run-
+        name: condition-pipelinerun
       spec:
-        taskSpec:
-          inputs:
-            resources:
-              - name: source
-                type: git
-          steps:
-            - image: ubuntu
-              script: |
-                #! /bin/bash
-                ls -al $(inputs.resources.source.path)
-
-                echo $(params.comment)
-        inputs:
-          resources:
-            - name: source
-              resourceSpec:
-                type: git
-                params:
-                  - name: revision
-                    value: $(params.gitrevision)
-                  - name: url
-                    value: $(params.gitrepositoryurl)
+        pipelineRef:
+          name: condition-pipeline
