@@ -10,4 +10,4 @@ spec:
     - name: gitrepositoryurl
       value: $(body.repository.html_url)
     - name: comment
-      value: $(body.comment.body)
+      value: '$(body.comment.body)'

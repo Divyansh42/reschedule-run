@@ -20,24 +20,68 @@ spec:
 
   - name: REQUEST_URL
     description: |
-      The GitHub issue or pull request URL where we want to add a new
-      comment.
+      The GitHub repository URL where we want to add a new
+      webhook.
+    type: string
+  
+  - name: PAYLOAD_URL
+    description: |
+      The URL to which the payloads will be delivered.
     type: string
 
+  - name: SET_ACTIVE
+    description: |
+      Determines if notifications are sent when the webhook 
+      is triggered. Set to true to send notifications.
+    default: "True"
+    type: string
+
+  - name: EVENTS
+    description: |
+      An array conatining all the events for which hook
+      is to be triggered.
+    type: array
+    default:
+      - "push"
+
+  - name: CONTENT_TYPE
+    description: |
+      The media type used to serialize the payloads. 
+      Supported values include json and form.
+    default: "form"
+    type: string
+  
+  - name: INSECURE_SSL
+    description: |
+      Determines whether the SSL certificate of the host
+      for url will be verified when delivering payloads.
+      Supported values include 0 (verification is performed)
+      and 1 (verification is not performed).
+    default: "0"
+
+
   steps:
-    - name: add-comment
+    - name: add-webhook
       env:
         - name: GITHUBTOKEN
           valueFrom:
             secretKeyRef:
               name: github
               key: token
+        - name: WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: webhook
+              key: token
 
       image: registry.access.redhat.com/ubi8/ubi:latest
+      args:
+        - "$(params.EVENTS)"
       script: |
         #!/usr/libexec/platform-python
         import json
         import os
+        import sys
         import http.client
         import urllib.parse
 
@@ -49,20 +93,18 @@ spec:
         api_url = "$(params.API_PATH_PREFIX)" + "/repos/" + "/".join(split_url[1:3])
         print(api_url)
 
-        # Trying to avoid quotes issue as much as possible by using triple
-        # quotes
+        # Get array of events
+        events = sys.argv[1: ]
 
         data = {
           "name": "web",
-          "active": False,
-          "events": [
-            "push",
-            "pull_request"
-          ],
+          "active": $(params.SET_ACTIVE),
+          "events": events,
           "config": {
-            "url": "https://example.com/webhook",
-            "content_type": "json",
-            "insecure_ssl": "0"
+            "url": "$(params.PAYLOAD_URL)",
+            "content_type": "$(params.CONTENT_TYPE)",
+            "secret": os.environ["GITHUBTOKEN"],
+            "insecure_ssl": "$(params.INSECURE_SSL)"
           }
         }
         print("Adding webhook to GitHub: ")
@@ -77,10 +119,11 @@ spec:
                 "User-Agent": "TektonCD, the peaceful cat",
                 "Authorization": "Bearer " + os.environ["GITHUBTOKEN"],
             })
+            
         resp = conn.getresponse()
         if not str(resp.status).startswith("2"):
             print("Error: %d" % (resp.status))
             print(resp.read())
         else:
-          print("a GitHub comment has been added to "
+          print("a GitHub Webhook has been added to "
                 "$(params.REQUEST_URL)")

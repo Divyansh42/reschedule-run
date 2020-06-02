@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: create-eventlistener
+  description: |
+    This Task will add a webhook to a github repository.
+spec:
+  params:
+    - name: filename
+      description: kubeconfig file name
+      type: string
+  workspaces:
+    - name: input
+      readOnly: true
+  results:
+    - name: payload_url
+      description: |
+        The URL to which the payloads will be delivered.
+        Will be used in the webhook creator task.
+
+  steps:
+    - name: add-webhook
+      image: quay.io/openshift/origin-cli:latest
+      script: | 
+
+        export KUBECONFIG="$(workspaces.input.path)/$(inputs.params.filename)"
+
+        # oc delete -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.12.1/release.yaml
+        kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+        
+        # oc delete --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+        oc apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+
+        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/role.yaml
+        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/secret-triggers.yaml
+        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/triggertemplate.yaml
+        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/triggerbinding.yaml
+        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/github-eventlistener-interceptor.yaml
+
+        oc expose svc el-github-listener-interceptor
+        PAYLOAD_URL="$(oc  get route el-github-listener-interceptor --template='http://{{.spec.host}}')"
+
+        echo -n "$PAYLOAD_URL" > $(results.payload_url.path)
