@@ -12,6 +12,7 @@ spec:
   workspaces:
     - name: input
       readOnly: true
+    - name: yaml-workspace
   results:
     - name: payload_url
       description: |
@@ -25,18 +26,15 @@ spec:
 
         export KUBECONFIG="$(workspaces.input.path)/$(inputs.params.filename)"
 
-        # oc delete -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.12.1/release.yaml
         kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
         
-        # oc delete --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
         oc apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 
-        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/role.yaml
-        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/secret-triggers.yaml
-        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/triggertemplate.yaml
-        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/triggerbinding.yaml
-        oc apply -f https://raw.githubusercontent.com/Divyansh42/reschedule-run/master/event-listener/github-eventlistener-interceptor.yaml
+        oc apply -f https://raw.githubusercontent.com/tektoncd/catalog/v1beta1/git/git-clone.yaml
 
+
+        oc apply -f '$(workspaces.yaml-workspace.path)/.'
+        
         oc expose svc el-github-listener-interceptor
         PAYLOAD_URL="$(oc  get route el-github-listener-interceptor --template='http://{{.spec.host}}')"
 

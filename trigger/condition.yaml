@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Condition
+metadata:
+  name: check-comments
+spec:
+  params:
+  - name: comments
+    type: string
+  - name: expected
+    type: string
+  check:
+    image: registry.access.redhat.com/ubi8/ubi-minimal:latest
+    script: |
+      #!/bin/bash
+
+      #Define the string to split
+
+      comments="$(params.comments)"
+
+      # removing all the "\r" from the string
+      comments="${comments//$'\r'/}"
+      # comment="/lgtm
+      # /approve
+      # /test"
+
+      is_run=false
+      # echo $comments
+      while read -r comment
+      do 
+          echo "Received comment: $comment" 
+          if [ "$comment" == "$(params.expected)" ]
+          then
+              is_run=true
+              # echo "test-loop"
+              break
+          fi
+      done <<<"$comments"
+
+      if [ "$is_run" = true ]; then
+        exit 0
+        # echo "true"
+      else
+        exit 1
+        # echo "false"
+      fi

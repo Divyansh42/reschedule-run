@@ -6,14 +6,6 @@ metadata:
 spec:
   serviceAccountName: tekton-triggers-github-sa
   triggers:
-    # - name: github-listener
-    #   interceptors:
-    #     - github:
-    #         secretRef:
-    #           secretName: github-secret
-    #           secretKey: secretToken
-    #         eventTypes:
-    #           - pull_request
     - bindings:
       - name: github-binding
       template:
