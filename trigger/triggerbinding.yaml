@@ -9,5 +9,5 @@ spec:
       value: master
     - name: gitrepositoryurl
       value: $(body.repository.html_url)
-    - name: comment
-      value: '$(body.comment.body)'
+    - name: comments
+      value: $(body.comment.body)

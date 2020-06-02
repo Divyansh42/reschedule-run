@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: linter
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: language
+      description: Linter to be applied on particular language
+    - name: filepath
+      description: files on which linter is to be applied
+  steps:
+    - name: apply-lint
+      image: quay.io/vinamra2807/linter
+      workingDir: $(workspaces.output.path)
+      args:
+        - -l $(params.language)
+        - -f $(params.filepath)

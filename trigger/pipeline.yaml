@@ -1,0 +1,66 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: linter-pipeline
+spec:
+  workspaces:
+    - name: shared-workspace
+  params: 
+    - name: comments
+      type: string
+    - name: gitrepositoryurl
+      type: string
+  tasks:
+  - name: fetch-repository
+    taskRef:
+      name: git-clone
+    workspaces:
+      - name: output
+        workspace: shared-workspace
+    params:
+      - name: url
+        value: $(params.gitrepositoryurl)
+      - name: subdirectory
+        value: ""
+      - name: deleteExisting
+        value: "true"
+  - name: run-yaml-linter
+    conditions:
+    - conditionRef: check-comments
+      params:
+        - name: comments
+          value: $(params.comments)
+        - name: expected
+          value: "/yaml-lint"
+    taskRef:
+      name: linter
+    workspaces:
+      - name: output
+        workspace: shared-workspace
+    params:
+      - name: language
+        value: "yaml"
+      - name: filepath
+        value: "."
+    runAfter:
+      - fetch-repository
+  - name: run-md-linter
+    conditions:
+    - conditionRef: check-comments
+      params:
+        - name: comments
+          value: $(params.comments)
+        - name: expected
+          value: "/md-lint"
+    taskRef:
+      name: linter
+    workspaces:
+      - name: output
+        workspace: shared-workspace
+    params:
+      - name: language
+        value: "mdlint"
+      - name: filepath
+        value: "."
+    runAfter:
+      - fetch-repository

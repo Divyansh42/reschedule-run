@@ -1,0 +1,32 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: github-template
+spec:
+  params:
+    - name: gitrevision
+    - name: gitrepositoryurl
+    - name: comments
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: condition-pipelinerun-
+      spec:
+        params:
+          - name: comments
+            value: $(params.comments)
+          - name: gitrepositoryurl
+            value: $(params.gitrepositoryurl)
+        pipelineRef:
+          name: linter-pipeline
+        workspaces:
+        - name: shared-workspace
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 500Mi
